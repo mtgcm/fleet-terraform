@@ -77,6 +77,7 @@ variable "rds_config" {
     master_username                 = optional(string, "fleet")
     snapshot_identifier             = optional(string)
     cluster_tags                    = optional(map(string), {})
+    skip_final_snapshot             = optional(bool, true)
     backup_retention_period         = optional(number, 7)
   })
   default = {
@@ -96,6 +97,7 @@ variable "rds_config" {
     master_username                 = "fleet"
     snapshot_identifier             = null
     cluster_tags                    = {}
+    skip_final_snapshot             = true
     backup_retention_period         = 7
   }
   description = "The config for the terraform-aws-modules/rds-aurora/aws module"
