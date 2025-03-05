@@ -22,6 +22,7 @@ locals {
 }
 
 data "aws_region" "current" {}
+data "aws_caller_identity" "current" {}
 
 resource "aws_ecs_service" "fleet" {
   name                               = var.fleet_config.service.name
@@ -275,12 +276,21 @@ resource "aws_secretsmanager_secret_version" "fleet_server_private_key" {
   secret_string = random_password.fleet_server_private_key.result
 }
 
-// Customer keys are not supported in our Fleet Terraforms at the moment. We will evaluate the
-// possibility of providing this capability in the future.
 // No versioning on this bucket is by design.
 // Bucket logging is not supported in our Fleet Terraforms at the moment. It can be enabled by the
 // organizations deploying Fleet, and we will evaluate the possibility of providing this capability
 // in the future.
+
+resource "aws_kms_key" "software_installers" {
+  count               = var.fleet_config.software_installers.create_kms_key == true ? 1 : 0
+  enable_key_rotation = true
+}
+
+resource "aws_kms_alias" "software_installers" {
+  count         = var.fleet_config.software_installers.create_kms_key == true ? 1 : 0
+  target_key_id = aws_kms_key.software_installers[0].id
+  name          = "alias/${var.fleet_config.software_installers.kms_alias}"
+}
 
 resource "aws_s3_bucket" "software_installers" { #tfsec:ignore:aws-s3-encryption-customer-key:exp:2022-07-01  #tfsec:ignore:aws-s3-enable-versioning #tfsec:ignore:aws-s3-enable-bucket-logging:exp:2022-06-15
   count         = var.fleet_config.software_installers.create_bucket == true ? 1 : 0
@@ -293,7 +303,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "software_installe
   bucket = aws_s3_bucket.software_installers[0].bucket
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "aws:kms"
+      kms_master_key_id = var.fleet_config.software_installers.create_kms_key == true ? aws_kms_key.software_installers[0].id : null
+      sse_algorithm     = "aws:kms"
     }
   }
 }
