@@ -1,5 +1,5 @@
 # This example doesn't cover using a remote backend for storing the current
-# terraform state in S3 with a lock in DynamoDB (ideal for AWS) or other 
+# terraform state in S3 with a lock in DynamoDB (ideal for AWS) or other
 # methods. If using automation to apply the configuration or if multiple people
 # will be managing these resources, this is recommended.
 #
@@ -18,7 +18,7 @@ terraform {
 locals {
   # Change these to match your environment.
   domain_name = "fleet.example.com"
-  vpc_name = "fleet-vpc"
+  vpc_name    = "fleet-vpc"
   # This creates a subdomain in AWS to manage DNS Records.
   # This allows for easy validation of TLS Certificates via ACM and
   # the use of alias records to the load balancer.  Please note if
@@ -28,10 +28,12 @@ locals {
   zone_name = "fleet.example.com"
 
   # Bucket names need to be unique across AWS.  Change this to a friendly
-  # name to make finding carves in s3 easier later.
-  osquery_carve_bucket_name   = "fleet-osquery-carve"
-  osquery_results_bucket_name = "fleet-osquery-results"
-  osquery_status_bucket_name  = "fleet-osquery-status"
+  # name to make finding carves in s3 easier later.  Uncomment if using
+  # s3 carves.
+  # osquery_carve_bucket_name   = "fleet-osquery-carve"
+  # Uncomment if using Firehose logging destinations.
+  # osquery_results_bucket_name = "fleet-osquery-results"
+  # osquery_status_bucket_name  = "fleet-osquery-status"
 
   # Extra ENV Vars for Fleet customization can be set here.
   fleet_environment_variables = {
@@ -50,7 +52,7 @@ locals {
 }
 
 module "fleet" {
-  source          = "github.com/fleetdm/fleet-terraform?depth=1&ref=tf-mod-root-v1.12.0"
+  source          = "github.com/fleetdm/fleet-terraform?depth=1&ref=tf-mod-root-v1.13.0"
   certificate_arn = module.acm.acm_certificate_arn
 
   vpc = {
@@ -72,16 +74,24 @@ module "fleet" {
       max_capacity = 5
     }
     # 4GB Required for vulnerability scanning.  512MB works without.
-    mem = 4096
-    cpu = 512
-    extra_environment_variables = local.fleet_environment_variables
+    mem                         = 4096
+    cpu                         = 512
+    extra_environment_variables = merge(
+      local.fleet_environment_variables,
+      # uncomment if using a3 carves
+      # module.osquery-carve.fleet_extra_environment_variables
+      # uncomment if using firehose
+      # module.firehose-logging.fleet_extra_environment_variables
+    )
     # Uncomment if enabling mdm module below.
     # extra_secrets = module.mdm.extra_secrets
     # extra_execution_iam_policies = module.mdm.extra_execution_iam_policies
-    extra_iam_policies = concat(
-      module.osquery-carve.fleet_extra_iam_policies,
-      module.firehose-logging.fleet_extra_iam_policies,
-    )
+    # extra_iam_policies = concat(
+      # uncomment if using a3 carves
+      # module.osquery-carve.fleet_extra_iam_policies,
+      # uncomment if using firehose
+      # module.firehose-logging.fleet_extra_iam_policies,
+    # )
   }
   rds_config = {
     # See https://fleetdm.com/docs/deploy/reference-architectures#aws for instance classes.
@@ -129,23 +139,24 @@ module "migrations" {
   min_capacity             = module.fleet.byo-vpc.byo-db.byo-ecs.appautoscaling_target.min_capacity
 }
 
-module "osquery-carve" {
-  # The carve bucket also stores software.
-  source = "github.com/fleetdm/fleet-terraform/addons/osquery-carve?depth=1&ref=tf-mod-addon-osquery-carve-v1.1.0"
-  osquery_carve_s3_bucket = {
-    name = local.osquery_carve_bucket_name
-  }   
-} 
+# Enable if using s3 for carves
+# module "osquery-carve" {
+#   source = "github.com/fleetdm/fleet-terraform/addons/osquery-carve?depth=1&ref=tf-mod-addon-osquery-carve-v1.1.0"
+#   osquery_carve_s3_bucket = {
+#     name = local.osquery_carve_bucket_name
+#   }
+# }
 
-module "firehose-logging" {
-  source = "github.com/fleetdm/fleet-terraform/addons/logging-destination-firehose?depth=1&ref=tf-mod-addon-logging-destination-firehose-v1.1.1"
-  osquery_results_s3_bucket = {
-    name = local.osquery_results_bucket_name
-  }
-  osquery_status_s3_bucket = {
-    name = local.osquery_status_bucket_name
-  }
-}
+# Uncomment if using firehose logging destination
+# module "firehose-logging" {
+#   source = "github.com/fleetdm/fleet-terraform/addons/logging-destination-firehose?depth=1&ref=tf-mod-addon-logging-destination-firehose-v1.1.1"
+#   osquery_results_s3_bucket = {
+#     name = local.osquery_results_bucket_name
+#   }
+#   osquery_status_s3_bucket = {
+#     name = local.osquery_status_bucket_name
+#   }
+# }
 
 ## MDM
 
@@ -174,7 +185,7 @@ module "firehose-logging" {
 # If you want to supply the MDM secrets via terraform, I recommend that you do not store the secrets in the clear
 # on the device that applies the terraform.  For the example here, terraform will create a KMS key, which will then
 # be used to encrypt the secrets. The included mdm-secrets.tf file will then use the KMS key to dercrypt the secrets
-# on the filesystem to generate the 
+# on the filesystem to generate the
 
 # resource "aws_kms_key" "fleet_data_key" {
 #   description = "key used to encrypt sensitive data stored in terraform"
@@ -195,7 +206,7 @@ module "acm" {
 
   domain_name = local.domain_name
   # If you change the route53 zone to a data source this needs to become "data.aws_route53_zone.main.id"
-  zone_id     = aws_route53_zone.main.id
+  zone_id = aws_route53_zone.main.id
 
   wait_for_validation = true
 }
