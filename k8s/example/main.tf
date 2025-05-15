@@ -1,5 +1,5 @@
 module "fleet" {
-    source = "git::https://github.com/fleetdm/fleet-terraform//k8s?depth=1&ref=tf-mod-k8s-v1.0.0"
+    source = "git::https://github.com/fleetdm/fleet-terraform//k8s?depth=1&ref=tf-mod-k8s-v1.1.0"
 
     namespace = "fleet"
     hostname = "fleet.localhost.local"
@@ -13,7 +13,7 @@ module "fleet" {
             { name = "docker_pull_secret_two"}
         ]
     */
-    image_pull_secrets = [{}]
+    image_pull_secrets = []
     pod_annotations = {}
     service_annotations = {}
     service_account_annotations = {}
@@ -125,20 +125,20 @@ module "fleet" {
     
     ingress = {
         enabled = false
-        class_name = "nginx"
+        class_name = ""
         annotations = {}
         labels = {}
         hosts = [{
-            name = "fleet.example.com"
+            name = "fleet.localhost.local"
             paths = [{
                 path = "/"
                 path_type = "ImplementationSpecific"
             }]
         }]
         tls = {
-            secret_name = "fleet-tls"
+            secret_name = "chart-example-tls"
             hosts = [
-                "fleet.example.com"
+                "fleet.localhost.local"
             ]
         }
     }
@@ -153,7 +153,6 @@ module "fleet" {
             completions = 1
             active_deadline_seconds = 900
             backoff_limit = 6
-            ttl_seconds_after_finished = 100
             manual_selector = false
             restart_policy = "Never"
         }
@@ -258,11 +257,11 @@ module "fleet" {
 
     database = {
         enabled = false
-        secret_name = "password"
-        address = "mysql:3306"
+        secret_name = "mysql"
+        address = "fleet-database-mysql:3306"
         database = "fleet"
-        username = "root"
-        password_key = "mysql-password"
+        username = "fleet"
+        password_key = "password"
         max_open_conns = 50
         max_idle_conns = 50
         conn_max_lifetime = 0
@@ -279,11 +278,11 @@ module "fleet" {
 
     cache = {
         enabled = false
-        address = "redis:6379"
+        address = "fleet-cache-redis-headless:6379"
         database = "0"
-        use_password = false
-        secret_name = "redis-password"
-        password_key = "redis"
+        use_password = true
+        secret_name = "redis"
+        password_key = "password"
     }
 
     gke = {

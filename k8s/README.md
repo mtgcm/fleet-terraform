@@ -37,15 +37,15 @@ data:
   .dockerconfigjson: <base64_encoded_config>
 ```
 
-In order for the deployment to go through successfully, you'll need to create some secrets so Fleet knows how to authenticate against things like MySQL and Redis. While we'll only cover creating simple secrets, the deployment via terraform also supports instructing Fleet to pull the `valuesFrom:` an external secret store such as AWS Secrets Manager.
+In order for the deployment to go through successfully, you'll need to create some secrets so Fleet knows how to authenticate against things like MySQL and Redis.
 
 ```yaml
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: redis-password
-  namespace: <namespace_name>
+  name: redis
+  namespace: <namespace>
 type: kubernetes.io/basic-auth
 stringData:
   password: <redis-password-here>
@@ -53,8 +53,8 @@ stringData:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: mysql-password
-  namespace: <namespace_name>
+  name: mysql
+  namespace: <namespace>
 type: kubernetes.io/basic-auth
 stringData:
   password: <mysql-password-here>
@@ -84,10 +84,11 @@ If you have a Fleet premium license you would create a secret like the one below
 apiVersion: v1
 kind: Secret
 metadata:
-  name: fleet-license
-  namespace: <namespace_name>
-data:
-  license: <fleet-license-here>
+  name: license
+  namespace: <namespace>
+type: Opaque
+stringData:
+  license-key: <fleet-license-here>
 ```
 
 Once all of your secrets are configured, use `kubectl apply -f <secret_file_name.yaml> --namespace <your_namespace>` to configure them in the cluster.
@@ -130,7 +131,7 @@ The below will be in preparation for deployment through the `terraform apply` in
 In `main.tf` make sure the following variable `fleet.tls.enabled = false`, otherwise the Fleet terraform deployment will fail.
 In `main.tf` make sure the following map is configured with the correct values.
   - `ingress.enabled` must be `true`, if you'd like Fleet to deploy the nginx ingress for you.
-  - `ingress.class_name` needs to be set to `nginx`
+  - `ingress.class_name` needs to be set to `nginx`, but can be changed to values like `traefik`, if you have another compatible ingress.
   - `ingress.hosts.name` must have a matching entry in `ingress.tls.hosts`
     - example: `ingress.hosts.name = fleet.example.com` and `ingress.tls.hosts = fleet.example.com`
   - Last, `ingress.tls.secret_name` must be a valid secret name in your current namespace.*
@@ -143,16 +144,16 @@ In `main.tf` make sure the following map is configured with the correct values.
         annotations = {}
         labels = {}
         hosts = [{
-            name = "fleet.example.com"
+            name = "fleet.localhost.local"
             paths = [{
                 path = "/"
                 path_type = "ImplementationSpecific"
             }]
         }]
         tls = {
-            secret_name = "fleet-tls"
+            secret_name = "chart-example-tls"
             hosts = [
-                "fleet.example.com"
+                "fleet.localhost.local"
             ]
         }
     }
@@ -317,12 +318,12 @@ No modules.
 |------|-------------|------|---------|:--------:|
 | <a name="input_affinity_rules"></a> [affinity\_rules](#input\_affinity\_rules) | Used to configure affinity rules for the fleet deployment, migration job, and vuln-processing cron job. | <pre>object({ <br/>        required_during_scheduling_ignored_during_execution = optional(list(any), [])<br/>        preferred_during_scheduling_ignored_during_execution = optional(list(any), [])<br/>    })</pre> | n/a | yes |
 | <a name="input_anti_affinity_rules"></a> [anti\_affinity\_rules](#input\_anti\_affinity\_rules) | Used to configure anti-affinity rules for the fleet deployment, migration job, and vuln-processing cron job. | <pre>object({ <br/>        required_during_scheduling_ignored_during_execution = optional(list(any), [])<br/>        preferred_during_scheduling_ignored_during_execution = optional(list(any),<br/>        [<br/>            {<br/>                weight = 100<br/>                label_selector = {<br/>                    match_expressions = [<br/>                        {<br/>                            key = "app"<br/>                            operator = "In"<br/>                            values = ["fleet"]<br/>                        }<br/>                    ]<br/>                }<br/>                topology_key = "kubernetes.io/hostname"<br/>            }<br/>        ])<br/>    })</pre> | n/a | yes |
-| <a name="input_cache"></a> [cache](#input\_cache) | Used to configure redis specific values for use in the Fleet deployment, migration job, and vuln-processing cron job. | <pre>object({<br/>        enabled = optional(bool, false)<br/>        address = optional(string, "redis:6379")<br/>        database = optional(number, 0)<br/>        use_password = optional(bool, false)<br/>        secret_name = optional(string, "redis-password")<br/>        password_key = optional(string, "redis")<br/>    })</pre> | n/a | yes |
-| <a name="input_database"></a> [database](#input\_database) | Used to configure database specific values for use in the Fleet deployment, migration job, and vuln-processing cron job. | <pre>object({<br/>        enabled = optional(bool, false)<br/>        secret_name = optional(string, "password")<br/>        address = optional(string, "mysql:3306")<br/>        database = optional(string, "fleet")<br/>        username = optional(string, "fleet")<br/>        password_key = optional(string, "mysql-password")<br/>        max_open_conns = optional(number, 50)<br/>        max_idle_conns = optional(number, 50)<br/>        conn_max_lifetime = optional(number, 0)<br/><br/>        tls = object({<br/>            enabled = optional(bool, false)<br/>            config = optional(string, "")<br/>            server_name = optional(string, "")<br/>            ca_cert_key = optional(string, "")<br/>            cert_key = optional(string, "")<br/>            key_key = optional(string, "")<br/>        })<br/>    })</pre> | n/a | yes |
+| <a name="input_cache"></a> [cache](#input\_cache) | Used to configure redis specific values for use in the Fleet deployment, migration job, and vuln-processing cron job. | <pre>object({<br/>        enabled = optional(bool, false)<br/>        address = optional(string, "redis:6379")<br/>        database = optional(number, 0)<br/>        use_password = optional(bool, false)<br/>        secret_name = optional(string, "redis")<br/>        password_key = optional(string, "password")<br/>    })</pre> | n/a | yes |
+| <a name="input_database"></a> [database](#input\_database) | Used to configure database specific values for use in the Fleet deployment, migration job, and vuln-processing cron job. | <pre>object({<br/>        enabled = optional(bool, false)<br/>        secret_name = optional(string, "mysql")<br/>        address = optional(string, "mysql:3306")<br/>        database = optional(string, "fleet")<br/>        username = optional(string, "fleet")<br/>        password_key = optional(string, "password")<br/>        max_open_conns = optional(number, 50)<br/>        max_idle_conns = optional(number, 50)<br/>        conn_max_lifetime = optional(number, 0)<br/><br/>        tls = object({<br/>            enabled = optional(bool, false)<br/>            config = optional(string, "")<br/>            server_name = optional(string, "")<br/>            ca_cert_key = optional(string, "")<br/>            cert_key = optional(string, "")<br/>            key_key = optional(string, "")<br/>        })<br/>    })</pre> | n/a | yes |
 | <a name="input_environment_from_config_maps"></a> [environment\_from\_config\_maps](#input\_environment\_from\_config\_maps) | Used to configure additional environment variables from a config map for the fleet deployment and vuln-processing cron job. | `list(map(string))` | `[]` | no |
 | <a name="input_environment_from_secrets"></a> [environment\_from\_secrets](#input\_environment\_from\_secrets) | Used to configure additional environment variables from a secret for the fleet deployment and vuln-processing cron job. | `list(map(string))` | `[]` | no |
 | <a name="input_environment_variables"></a> [environment\_variables](#input\_environment\_variables) | Used to configure additional environment variables for the fleet deployment and vuln-processing cron job. | `list(map(string))` | `[]` | no |
-| <a name="input_fleet"></a> [fleet](#input\_fleet) | Used to configure Fleet specific values for use in the Fleet deployment, migration job, and vuln-processing cron job. | <pre>object({<br/>        listen_port = optional(number, 8080)<br/>        secret_name = optional(string, "fleet")<br/>        migrations = object({<br/>            auto_apply_sql_migrations = optional(bool, true)<br/>            migration_job_annotations = optional(map(string), {})<br/>            parallelism = optional(number, 1)<br/>            completions = optional(number, 1)<br/>            active_deadline_seconds = optional(number, 900)<br/>            backoff_limit = optional(number, 6)<br/>            ttl_seconds_after_finished = optional(number, 100)<br/>            manual_selector = optional(bool, false)<br/>            restart_policy = optional(string, "Never")<br/>        })<br/>        tls = object({<br/>            enabled = optional(bool, false)<br/>            unique_tls_secret = optional(bool, false)<br/>            secret_name = optional(string, "fleet-tls")<br/>            compatibility = optional(string, "modern")<br/>            cert_secret_key = optional(string, "server.cert")<br/>            key_secret_key = optional(string, "server.key")<br/>        })<br/>        auth = object({<br/>            b_crypto_cost = optional(number, 12)<br/>            salt_key_size = optional(number, 24)<br/>        })<br/>        app = object({<br/>            token_key_size = optional(number, 24)<br/>            invite_token_validity_period = optional(string, "120h")<br/>        })<br/>        session = object({<br/>            key_size = optional(number, 64)<br/>            duration = optional(string, "2160h")<br/>        })<br/>        logging = object({<br/>            debug = optional(bool, false)<br/>            json = optional(bool, false)<br/>            disable_banner = optional(bool, false)<br/>        })<br/>        carving = object({<br/>            s3 = object({<br/>                bucket_name = optional(string, "")<br/>                prefix = optional(string, "")<br/>                access_key_id = optional(string, "")<br/>                secret_key = optional(string, "s3-bucket")<br/>                sts_assume_role_arn = optional(string, "")<br/>            })<br/>        })<br/>        license = object({<br/>            secret_name = optional(string, "")<br/>            license_key = optional(string, "license-key")<br/>        })<br/>        extra_volumes = optional(list(any), [])<br/>        extra_volume_mounts = optional(list(any), [])<br/>        security_context = object({<br/>            run_as_user = optional(number, 3333)<br/>            run_as_group = optional(number, 3333)<br/>        })<br/>    })</pre> | n/a | yes |
+| <a name="input_fleet"></a> [fleet](#input\_fleet) | Used to configure Fleet specific values for use in the Fleet deployment, migration job, and vuln-processing cron job. | <pre>object({<br/>        listen_port = optional(number, 8080)<br/>        secret_name = optional(string, "fleet")<br/>        migrations = object({<br/>            auto_apply_sql_migrations = optional(bool, true)<br/>            migration_job_annotations = optional(map(string), {})<br/>            parallelism = optional(number, 1)<br/>            completions = optional(number, 1)<br/>            active_deadline_seconds = optional(number, 900)<br/>            backoff_limit = optional(number, 6)<br/>            manual_selector = optional(bool, false)<br/>            restart_policy = optional(string, "Never")<br/>        })<br/>        tls = object({<br/>            enabled = optional(bool, false)<br/>            unique_tls_secret = optional(bool, false)<br/>            secret_name = optional(string, "fleet-tls")<br/>            compatibility = optional(string, "modern")<br/>            cert_secret_key = optional(string, "server.cert")<br/>            key_secret_key = optional(string, "server.key")<br/>        })<br/>        auth = object({<br/>            b_crypto_cost = optional(number, 12)<br/>            salt_key_size = optional(number, 24)<br/>        })<br/>        app = object({<br/>            token_key_size = optional(number, 24)<br/>            invite_token_validity_period = optional(string, "120h")<br/>        })<br/>        session = object({<br/>            key_size = optional(number, 64)<br/>            duration = optional(string, "2160h")<br/>        })<br/>        logging = object({<br/>            debug = optional(bool, false)<br/>            json = optional(bool, false)<br/>            disable_banner = optional(bool, false)<br/>        })<br/>        carving = object({<br/>            s3 = object({<br/>                bucket_name = optional(string, "")<br/>                prefix = optional(string, "")<br/>                access_key_id = optional(string, "")<br/>                secret_key = optional(string, "s3-bucket")<br/>                sts_assume_role_arn = optional(string, "")<br/>            })<br/>        })<br/>        license = object({<br/>            secret_name = optional(string, "")<br/>            license_key = optional(string, "license-key")<br/>        })<br/>        extra_volumes = optional(list(any), [])<br/>        extra_volume_mounts = optional(list(any), [])<br/>        security_context = object({<br/>            run_as_user = optional(number, 3333)<br/>            run_as_group = optional(number, 3333)<br/>        })<br/>    })</pre> | n/a | yes |
 | <a name="input_gke"></a> [gke](#input\_gke) | Used to configure gke specific values for use in the Fleet deployment, migration job, and vuln-processing cron job. | <pre>object({<br/>        workload_identity_email = optional(string, "")<br/>        cloud_sql = object({<br/>            enable_proxy = optional(bool, false)<br/>            image_repository = optional(string, "gcr.io/cloudsql-docker/gce-proxy")<br/>            image_tag = optional(string, "1.17-alpine")<br/>            verbose = optional(bool, true)<br/>            instance_name = optional(string, "")<br/>        })<br/>        ingress = object({<br/>            use_managed_certificate = optional(bool, false)<br/>            use_gke_ingress = optional(bool, false)<br/>            node_port = optional(number, 0)<br/>            hostnames = optional(list(string), [""])<br/>        })<br/>    })</pre> | n/a | yes |
 | <a name="input_hostname"></a> [hostname](#input\_hostname) | Used as the hostname that you will access fleet on. | `string` | `"fleet.localhost"` | no |
 | <a name="input_image_pull_secrets"></a> [image\_pull\_secrets](#input\_image\_pull\_secrets) | Used to inject image pull secrets for access to a private container registry. | <pre>list(object({<br/>        name = string<br/>    }))</pre> | `[]` | no |

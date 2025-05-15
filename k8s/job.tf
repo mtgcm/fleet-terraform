@@ -12,7 +12,6 @@ resource "kubernetes_job" "migration" {
         completions = local.fleet.migrations.completions
         active_deadline_seconds = local.fleet.migrations.active_deadline_seconds
         backoff_limit = local.fleet.migrations.backoff_limit
-        ttl_seconds_after_finished = local.fleet.migrations.ttl_seconds_after_finished
 
         manual_selector = local.fleet.migrations.manual_selector
 
@@ -95,8 +94,8 @@ resource "kubernetes_job" "migration" {
                         name = "FLEET_MYSQL_PASSWORD"
                         value_from {
                             secret_key_ref {
-                                key = local.database.secret_name
-                                name = local.database.password_key
+                                name = local.database.secret_name
+                                key = local.database.password_key
                             }
                         }
                     }
