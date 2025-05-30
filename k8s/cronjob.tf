@@ -171,7 +171,7 @@ resource "kubernetes_cron_job_v1" "fleet_vuln_processing_cron_job" {
                             security_context {
                                 run_as_user = local.fleet.security_context.run_as_user
                                 run_as_group = local.fleet.security_context.run_as_group
-                                run_as_non_root = "true"
+                                run_as_non_root = local.fleet.security_context.run_as_non_root
                                 read_only_root_filesystem = "true"
                                 privileged = "false"
                                 allow_privilege_escalation = "false"
@@ -231,10 +231,10 @@ resource "kubernetes_cron_job_v1" "fleet_vuln_processing_cron_job" {
                                             drop = ["ALL"]
                                         },
                                         privileged = false,
-                                        read_only_root_filesystem = true,
-                                        run_as_group = local.fleet.security_context.run_as_group,
+                                        read_only_root_filesystem = true,  
                                         run_as_user = local.fleet.security_context.run_as_user,
-                                        run_as_non_root = true
+                                        run_as_group = local.fleet.security_context.run_as_group,
+                                        run_as_non_root = local.fleet.security_context.run_as_non_root
                                     }
                                 }
                             ] : []
@@ -260,8 +260,8 @@ resource "kubernetes_cron_job_v1" "fleet_vuln_processing_cron_job" {
                                     }
                                     privileged = container.value.security_context.privileged
                                     read_only_root_filesystem = container.value.security_context.read_only_root_filesystem
-                                    run_as_group = container.value.security_context.run_as_group
                                     run_as_user = container.value.security_context.run_as_user
+                                    run_as_group = container.value.security_context.run_as_group
                                     run_as_non_root = container.value.security_context.run_as_non_root
                                 }
                             }
