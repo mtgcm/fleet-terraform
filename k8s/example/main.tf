@@ -1,11 +1,11 @@
 module "fleet" {
-    source = "git::https://github.com/fleetdm/fleet-terraform//k8s?depth=1&ref=tf-mod-k8s-v1.1.1"
+    source = "git::https://github.com/fleetdm/fleet-terraform//k8s?depth=1&ref=tf-mod-k8s-v1.1.2"
 
     namespace = "fleet"
     hostname = "fleet.localhost.local"
     replicas = "3"
     image_repository = "fleetdm/fleet"
-    image_tag = "v4.66.0"
+    image_tag = "v4.69.0"
     /*
         Example:
         image_pull_secrets = [
@@ -135,12 +135,16 @@ module "fleet" {
                 path_type = "ImplementationSpecific"
             }]
         }]
-        tls = {
-            secret_name = "chart-example-tls"
-            hosts = [
-                "fleet.localhost.local"
-            ]
-        }
+        /*
+          # Example
+          tls = {
+              secret_name = "chart-example-tls"
+              hosts = [
+                  "fleet.localhost.local"
+              ]
+          }
+        */
+        tls = {}
     }
 
     fleet = {
@@ -309,9 +313,38 @@ module "fleet" {
         }
     }
 
+    /*
+        database_read_replica - optional and be configured to enable Fleet to use read replica for
+            MySQL SELECT statements.
+        
+
+        database_read_replica = {
+            enabled = false
+            address = "fleet-database-mysql-read-replica:3306"
+            database = "fleet"
+            username = "fleet-ro"
+            secret_name = "mysql"
+            password_key = "ro-password"
+            password_path = ""
+            max_open_conns = 50
+            max_idle_conns = 50
+            conn_max_lifetime = 0
+
+            tls = {
+                enabled = false
+                config = ""
+                server_name = ""
+                ca_cert_key = ""
+                cert_key = ""
+                key_key = ""
+            }   
+        }
+    */
+    database_read_replica = {}
+
     cache = {
         enabled = false
-        address = "fleet-cache-redis-headless:6379"
+        address = "fleet-cache-redis-master:6379"
         database = "0"
         use_password = true
         secret_name = "redis"
