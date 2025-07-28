@@ -51,7 +51,9 @@ module "rds" {
   engine_version = var.rds_config.engine_version
   instance_class = var.rds_config.instance_class
 
-  instances = local.rds_replica_instances
+  instances = var.rds_config.serverless ? {
+    one = {}
+  } : local.rds_replica_instances
 
   serverlessv2_scaling_configuration = var.rds_config.serverless ? {
     min_capacity = var.rds_config.serverless_min_capacity
