@@ -48,11 +48,13 @@ module "rds" {
 
   name           = var.rds_config.name
   engine         = "aurora-mysql"
+  engine_mode    = var.rds_config.serverless ? "provisioned" : null
   engine_version = var.rds_config.engine_version
   instance_class = var.rds_config.instance_class
 
   instances = var.rds_config.serverless ? {
     one = {}
+    two = {}
   } : local.rds_replica_instances
 
   serverlessv2_scaling_configuration = var.rds_config.serverless ? {
