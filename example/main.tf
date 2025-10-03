@@ -73,7 +73,7 @@ locals {
 }
 
 module "fleet" {
-  source          = "github.com/fleetdm/fleet-terraform?depth=1&ref=tf-mod-root-v1.18.2"
+  source          = "github.com/fleetdm/fleet-terraform?depth=1&ref=tf-mod-root-v1.18.3"
   certificate_arn = module.acm.acm_certificate_arn
 
   vpc = {
@@ -167,6 +167,23 @@ module "fleet" {
     #   routing_http_response_x_frame_options_header_value                  = "SAMEORIGIN"
     # }
     # Optional rules to allowlist only osquery/orbit traffic and allowed IPs.
+    # For https_listener_rules, the following conditions are supported
+    # Example:
+    #     conditions = [{
+    #       host_headers         = ["example.com"]
+    #       path_patterns        = ["/api/*"]
+    #       http_request_methods = ["GET", "POST"]
+    #       source_ips           = ["1.2.3.4/32"]
+    #       http_headers = [{
+    #         http_header_name = "X-Custom-Header-Foo"
+    #         values           = ["bar"]
+    #       }]
+    #       query_strings = [{
+    #         key   = "env"
+    #         value = "foobar"
+    #       }]
+    #     }]
+    #
     # https_listener_rules = concat([{
     #   priority             = 9000
     #   actions = [{
