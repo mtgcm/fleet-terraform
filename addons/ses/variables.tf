@@ -13,3 +13,15 @@ variable "extra_txt_records" {
   description = "Extra TXT records that have to match the same name as the Fleet instance"
   default     = []
 }
+
+variable "custom_mail_from" {
+  type = object({
+    enabled       = optional(bool, false)
+    domain_prefix = optional(string, "")
+  })
+  default = {
+    enabled       = false
+    domain_prefix = ""
+  }
+  description = "Custom MAIL FROM domain settings"
+}

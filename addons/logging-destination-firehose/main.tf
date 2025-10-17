@@ -8,7 +8,8 @@
 data "aws_region" "current" {}
 
 resource "aws_s3_bucket" "osquery-results" { #tfsec:ignore:aws-s3-encryption-customer-key:exp:2022-07-01  #tfsec:ignore:aws-s3-enable-versioning #tfsec:ignore:aws-s3-enable-bucket-logging:exp:2022-06-15
-  bucket = var.osquery_results_s3_bucket.name
+  bucket        = var.osquery_results_s3_bucket.name
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "osquery-results" {
@@ -47,7 +48,8 @@ resource "aws_s3_bucket_public_access_block" "osquery-results" {
 // organizations deploying Fleet, and we will evaluate the possibility of providing this capability
 // in the future.
 resource "aws_s3_bucket" "osquery-status" { #tfsec:ignore:aws-s3-encryption-customer-key:exp:2022-07-01 #tfsec:ignore:aws-s3-enable-versioning #tfsec:ignore:aws-s3-enable-bucket-logging:exp:2022-06-15
-  bucket = var.osquery_status_s3_bucket.name
+  bucket        = var.osquery_status_s3_bucket.name
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "osquery-status" {
@@ -86,7 +88,8 @@ resource "aws_s3_bucket_public_access_block" "osquery-status" {
 // organizations deploying Fleet, and we will evaluate the possibility of providing this capability
 // in the future.
 resource "aws_s3_bucket" "audit" { #tfsec:ignore:aws-s3-encryption-customer-key:exp:2022-07-01 #tfsec:ignore:aws-s3-enable-versioning #tfsec:ignore:aws-s3-enable-bucket-logging:exp:2022-06-15
-  bucket = var.audit_s3_bucket.name
+  bucket        = var.audit_s3_bucket.name
+  force_destroy = true
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "audit" {
@@ -164,17 +167,17 @@ data "aws_iam_policy_document" "audit_policy_doc" {
 }
 
 resource "aws_iam_policy" "firehose-results" {
-  name   = "osquery_results_firehose_policy"
+  name   = var.prefix == "" ? "osquery_results_firehose_policy" : "${var.prefix}_osquery_results_firehose_policy"
   policy = data.aws_iam_policy_document.osquery_results_policy_doc.json
 }
 
 resource "aws_iam_policy" "firehose-status" {
-  name   = "osquery_status_firehose_policy"
+  name   = var.prefix == "" ? "osquery_status_firehose_policy" : "${var.prefix}_osquery_status_firehose_policy"
   policy = data.aws_iam_policy_document.osquery_status_policy_doc.json
 }
 
 resource "aws_iam_policy" "firehose-audit" {
-  name   = "audit_firehose_policy"
+  name   = var.prefix == "" ? "audit_firehose_policy" : "${var.prefix}_audit_firehose_policy"
   policy = data.aws_iam_policy_document.audit_policy_doc.json
 }
 
